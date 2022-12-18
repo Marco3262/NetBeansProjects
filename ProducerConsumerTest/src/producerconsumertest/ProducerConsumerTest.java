@@ -8,7 +8,7 @@ package producerconsumertest;
  *
  * @author marco
  */
-public class ProducerCconsumerTest {
+public class ProducerConsumerTest {
 
     /**
      * @param args the command line arguments
