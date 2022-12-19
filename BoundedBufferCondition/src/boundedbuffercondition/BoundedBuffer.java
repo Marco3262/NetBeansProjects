@@ -48,4 +48,55 @@ public class BoundedBuffer {
         this.notEmpty = this.mutex.newCondition();
     }// end costruttore
     
-}
+    // metodo di inserimento elementi
+    // deve essere in mutua esclusione con il metodo di rimozione
+    // deve sospendere i produttori se il buffer è pieno
+    
+    public void insert(int item){
+        this.mutex.lock();
+        try{
+            // devo testare la variabile condivisa per vedere se c'è spazio nel buffer
+            while(this.numElements == this.buffer.length)
+                this.notFull.await(); // mette in sospensione il thread
+                                      // automaticamente rilascia il permesso sul semaforo binario 
+                                      // dal quale deriva la condition
+            // se sto eseguendo qua, significa che almeno una posizione
+            // libera esiste
+            this.buffer[this.in] = item;
+            this.in = (this.in+1)%this.buffer.length;
+            // ora devo svegliare un consumatore se sta dormendo
+            // se sono più di uno si sveglia il primo in ordine fifo
+            // se avessi messo signalall si sarebbero svegliati tutti, e sarebbe
+            // entrato uno a caso
+            this.notEmpty.signal();
+            System.out.println("Inserito elemento "+item);
+        }catch(InterruptedException e){
+            System.out.println(e);
+        }finally{
+        this.mutex.unlock();
+        }
+    }// end metodo insert
+    
+    // metodo di rimozione elementi
+    // deve essere in mutua esclusione con il metodo di inserimento e
+    // deve sospendere i consumatori se non ci sono elementi nel buffer
+    
+    public int remove(){
+        int removed = -1;
+        this.mutex.lock();
+        try{
+            while(this.numElements == 0){
+                this.notEmpty.await();
+            removed = this.buffer[this.out];
+            this.out = (this.out +1)%this.buffer.length;
+            this.notFull.signal();
+            System.out.println("Rimosso elemento "+ removed);    
+            }
+        }catch(InterruptedException e){
+            System.out.println(e);
+        }finally{
+            this.mutex.unlock();
+        }
+        return removed;
+    }// end metodo remove
+}// end classe
